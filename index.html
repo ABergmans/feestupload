@@ -838,13 +838,20 @@ function uploadWithProgress(url, body){
     const controller = new AbortController();
     const timeoutId = setTimeout(()=> controller.abort(), 45000);
 
+    // mode:'no-cors' omzeilt de CORS-blokkade (o.a. bij openen via file:// of origin 'null').
+    // Het verzoek wordt gewoon verstuurd; het antwoord is dan 'opaque' (niet leesbaar).
+    // Netwerkfouten (offline) geven nog steeds een error.
     fetch(url, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body,
       signal: controller.signal
     })
-      .then(res => res.json().catch(()=>({success:true})))
+      .then(res => {
+        if(res.type === 'opaque') return {success:true};
+        return res.json().catch(()=>({success:true}));
+      })
       .then(result => {
         clearInterval(ticker);
         clearTimeout(timeoutId);
